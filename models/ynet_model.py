@@ -167,6 +167,8 @@ class UpConv(nn.Module):
 # -------------------------------------------------------------------------------------------------- #
 # -------------------------------------------------------------------------------------------------- #
 # Model 1 modified Unet for beamforming
+
+
 class YnetModel(BaseModel):
 
     def __init__(self, opt, in_channels=1, up_mode='transpose', merge_mode='concat'):  # todo 改in_channels=3
@@ -178,10 +180,10 @@ class YnetModel(BaseModel):
                 for transpose convolution or 'upsample' for nearest neighbour
                 upsampling.
         """
-        super(YnetModel, self).__init__(self)
-        # BaseModel().__init__(self, opt)
+        BaseModel.__init__(self, opt)
         self.isTrain = opt.isTrain
         self.optimizer = torch.optim.Adam(model.parameters(), lr=opt.lr)
+        self.gpu_ids = opt.gpu_ids
 
 
         if up_mode in ('transpose', 'upsample'):
