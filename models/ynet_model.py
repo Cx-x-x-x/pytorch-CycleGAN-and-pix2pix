@@ -288,9 +288,9 @@ class YnetModel(BaseModel):
         Parameters:
             input: a dictionary that contains the data itself and its metadata information.
         """
-        self.reimg = F.upsample(input['p0'], (128, 128), mode='bilinear').to(self.device)
-        self.bfimg = F.upsample(input['p0_tr'], (128, 128), mode='bilinear').to(self.device)
-        self.x = input['sensor_data'].to(self.device)
+        self.reimg = F.upsample(input[1], (128, 128), mode='bilinear').to(self.device)
+        self.bfimg = F.upsample(input[2], (128, 128), mode='bilinear').to(self.device)
+        self.x = input[0].to(self.device)
 
     def forward(self):
         # encoder1: raw data
