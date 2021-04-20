@@ -167,11 +167,8 @@ class UpConv(nn.Module):
 # -------------------------------------------------------------------------------------------------- #
 # -------------------------------------------------------------------------------------------------- #
 # Model 1 modified Unet for beamforming
-
-
-class YnetModel(BaseModel):
-
-    def __init__(self, opt, in_channels=1, up_mode='transpose', merge_mode='concat'):  # todo 改in_channels=3
+class YNet(nn.Module):
+    def __init__(self, in_channels=1, up_mode='transpose', merge_mode='concat'):  # todo 改in_channels=3
         """
         Arguments:
             in_channels: int, number of channels in the input tensor.
@@ -180,12 +177,7 @@ class YnetModel(BaseModel):
                 for transpose convolution or 'upsample' for nearest neighbour
                 upsampling.
         """
-        BaseModel.__init__(self, opt)
-        self.isTrain = opt.isTrain
-        self.optimizer = torch.optim.Adam(model.parameters(), lr=opt.lr)
-        self.gpu_ids = opt.gpu_ids
-
-
+        super(YNet, self).__init__()
         if up_mode in ('transpose', 'upsample'):
             self.up_mode = up_mode
         else:
@@ -239,19 +231,9 @@ class YnetModel(BaseModel):
         for i, m in enumerate(self.modules()):
             self.weight_init(m)
 
-    def set_input(self, input):
-        """Unpack input data from the dataloader and perform necessary pre-processing steps.
-
-        Parameters:
-            input: a dictionary that contains the data itself and its metadata information.
-        """
-        self.p0 = input['p0'].to(self.device)
-        self.p0_tr = input['p0_tr'].to(self.device)
-        self.raw = input['sensor_data'].to(self.device)
-
-    def forward(self):
+    def forward(self, x, bfimg):
         # encoder1: raw data
-        x1, before_pool1 = self.down1(self.raw)  # 1280, 64,32
+        x1, before_pool1 = self.down1(x)  # 1280, 64,32
         x2, before_pool2 = self.down2(x1)  # 640, 32,64
         x3, before_pool3 = self.down3(x2)  # 320, 16,128
         x4, before_pool4 = self.down4(x3)  # 160, 8,256
@@ -261,13 +243,14 @@ class YnetModel(BaseModel):
         before_pool2_resize = F.upsample(before_pool2, (64, 64), mode='bilinear')
         before_pool1_resize = F.upsample(before_pool1, (128, 128), mode='bilinear')
         # encoder2: bf
-        bx1, bxbefore_pool1 = self.tdown1(self.p0_tr)
+        bx1, bxbefore_pool1 = self.tdown1(bfimg)
         bx2, bxbefore_pool2 = self.tdown2(bx1)
         bx3, bxbefore_pool3 = self.tdown3(bx2)
         bx4, bxbefore_pool4 = self.tdown4(bx3)
         bx5 = self.bbottom(bx4)  # 8, 8, 256
         if self.merge_mode == 'add':
             out = x5 + bx5
+
         else:
             # concat
             out = torch.cat((x5, bx5), 1)
@@ -276,7 +259,42 @@ class YnetModel(BaseModel):
         out = self.up2(before_pool3_resize, bxbefore_pool3, out)  # 32, 32,64
         out = self.up3(before_pool2_resize, bxbefore_pool2, out)  # 64, 64,32
         out = self.up4(before_pool1_resize, bxbefore_pool1, out)  # 128, 128,1
-        self.out = out
+        return out
+
+# -------------------------------------------------------------------------------------------------- #
+# -------------------------------------------------------------------------------------------------- #
+
+
+class YnetModel(BaseModel):
+
+    def __init__(self, opt):  # todo 改in_channels=3
+        """
+        Arguments:
+            in_channels: int, number of channels in the input tensor.
+                Default is 3 for RGB images.
+            up_mode: string, type of upconvolution. Choices: 'transpose'
+                for transpose convolution or 'upsample' for nearest neighbour
+                upsampling.
+        """
+        BaseModel.__init__(self, opt)
+        self.isTrain = opt.isTrain
+        self.net = YNet()
+        self.optimizer = torch.optim.Adam(self.net.parameters(), lr=opt.lr)
+        self.gpu_ids = opt.gpu_ids
+
+    def set_input(self, input):
+        """Unpack input data from the dataloader and perform necessary pre-processing steps.
+
+        Parameters:
+            input: a dictionary that contains the data itself and its metadata information.
+        """
+        self.reimg = F.upsample(input['p0'], (128, 128), mode='bilinear').to(self.device)
+        self.bfimg = F.upsample(input['p0_tr'], (128, 128), mode='bilinear').to(self.device)
+        self.x = input['sensor_data'].to(self.device)
+
+    def forward(self):
+        # encoder1: raw data
+        self.output = self.net(self.x, self.bfimg)
 
     def backward(self):
         """ Calculate GAN loss for the discriminator
@@ -290,7 +308,7 @@ class YnetModel(BaseModel):
         We also call loss_D.backward() to calculate the gradients.
         """
         criterion = nn.MSELoss()
-        self.loss = criterion(self.out, self.p0)
+        self.loss = criterion(self.output, self.reimg)
         self.loss.backward()
 
     def optimize_parameters(self):
