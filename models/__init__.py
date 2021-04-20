@@ -1,6 +1,6 @@
 """This package contains modules related to objective functions, optimizations, and network architectures.
 
-To add a custom model class called 'dummy', you need to add a file called 'dummy_model.py' and define a subclass DummyModel inherited from BaseModel.
+To add a custom model class called 'dummy', you need to add a file called 'ynet_model.py' and define a subclass DummyModel inherited from BaseModel.
 You need to implement the following five functions:
     -- <__init__>:                      initialize the class; first call BaseModel.__init__(self, opt).
     -- <set_input>:                     unpack data from dataset and apply preprocessing.

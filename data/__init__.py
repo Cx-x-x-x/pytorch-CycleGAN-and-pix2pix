@@ -1,6 +1,6 @@
 """This package includes all the modules related to data loading and preprocessing
 
- To add a custom dataset class called 'dummy', you need to add a file called 'dummy_dataset.py' and define a subclass 'DummyDataset' inherited from BaseDataset.
+ To add a custom dataset class called 'dummy', you need to add a file called 'ynet_dataset.py' and define a subclass 'DummyDataset' inherited from BaseDataset.
  You need to implement four functions:
     -- <__init__>:                      initialize the class, first call BaseDataset.__init__(self, opt).
     -- <__len__>:                       return the size of dataset.
