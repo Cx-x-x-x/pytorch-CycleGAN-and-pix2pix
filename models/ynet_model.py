@@ -278,7 +278,7 @@ class YnetModel(BaseModel):
         """
         BaseModel.__init__(self, opt)
         self.isTrain = opt.isTrain
-        self.net = YNet()
+        self.net = YNet().to(self.device)
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=opt.lr)
         self.gpu_ids = opt.gpu_ids
 
@@ -307,8 +307,8 @@ class YnetModel(BaseModel):
         Return the discriminator loss.
         We also call loss_D.backward() to calculate the gradients.
         """
-        criterion = nn.MSELoss()
-        self.loss = criterion(self.output, self.reimg)
+        self.criterion = nn.MSELoss().to(self.device)
+        self.loss = self.criterion(self.output, self.reimg)
         self.loss.backward()
 
     def optimize_parameters(self):
