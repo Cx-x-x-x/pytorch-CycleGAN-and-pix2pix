@@ -281,6 +281,8 @@ class YnetModel(BaseModel):
         self.net = YNet().to(self.device)
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=opt.lr)
         self.gpu_ids = opt.gpu_ids
+        self.loss_names = ['ynet']
+        self.visual_names = ['reimg', 'bfimg', 'output']
 
     def set_input(self, input):
         """Unpack input data from the dataloader and perform necessary pre-processing steps.
@@ -290,11 +292,11 @@ class YnetModel(BaseModel):
         """
         self.reimg = F.upsample(input[1], (128, 128), mode='bilinear').to(self.device)
         self.bfimg = F.upsample(input[2], (128, 128), mode='bilinear').to(self.device)
-        self.x = input[0].to(self.device)
+        self.raw = input[0].to(self.device)
 
     def forward(self):
         # encoder1: raw data
-        self.output = self.net(self.x, self.bfimg)
+        self.output = self.net(self.raw, self.bfimg)
 
     def backward(self):
         """ Calculate GAN loss for the discriminator
@@ -308,8 +310,8 @@ class YnetModel(BaseModel):
         We also call loss_D.backward() to calculate the gradients.
         """
         self.criterion = nn.MSELoss().to(self.device)
-        self.loss = self.criterion(self.output, self.reimg)
-        self.loss.backward()
+        self.loss_ynet = self.criterion(self.output, self.reimg)
+        self.loss_ynet.backward()
 
     def optimize_parameters(self):
         """Update network weights; it will be called in every training iteration."""
