@@ -278,11 +278,12 @@ class YnetModel(BaseModel):
         """
         BaseModel.__init__(self, opt)
         self.isTrain = opt.isTrain
-        self.net = YNet().to(self.device)
-        self.optimizer = torch.optim.Adam(self.net.parameters(), lr=opt.lr)
+        self.netYNet = YNet().to(self.device)
+        self.optimizer = torch.optim.Adam(self.netYNet.parameters(), lr=opt.lr)
         self.gpu_ids = opt.gpu_ids
         self.loss_names = ['ynet']
         self.visual_names = ['reimg', 'bfimg', 'output']
+        self.model_names = ['YNet']
 
     def set_input(self, input):
         """Unpack input data from the dataloader and perform necessary pre-processing steps.
@@ -296,7 +297,7 @@ class YnetModel(BaseModel):
 
     def forward(self):
         # encoder1: raw data
-        self.output = self.net(self.raw, self.bfimg)
+        self.output = self.netYNet(self.raw, self.bfimg)
 
     def backward(self):
         """ Calculate GAN loss for the discriminator
