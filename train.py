@@ -24,10 +24,6 @@ from data import create_dataset
 from models import create_model
 from util.visualizer import Visualizer
 
-import matplotlib.pyplot as plt
-from tensorboardX import SummaryWriter
-
-writer = SummaryWriter('./logs')
 
 if __name__ == '__main__':
     opt = TrainOptions().parse()   # get training options
@@ -92,5 +88,3 @@ if __name__ == '__main__':
             model.save_networks(epoch)
 
         print('End of epoch %d / %d \t Time Taken: %d sec' % (epoch, opt.n_epochs + opt.n_epochs_decay, time.time() - epoch_start_time))
-
-writer.close()
