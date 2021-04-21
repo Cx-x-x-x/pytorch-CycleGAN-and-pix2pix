@@ -8,6 +8,7 @@ import torch.utils.data as data
 from torch.utils.data import DataLoader
 import scipy.io as scio
 from data.base_dataset import BaseDataset
+from data.image_folder import make_dataset
 
 
 def np_range_norm(image, maxminnormal=True, range1=True):
@@ -24,6 +25,17 @@ def np_range_norm(image, maxminnormal=True, range1=True):
             normal_image = (image - _mean) / _std
 
     return normal_image
+
+
+def make_ynet_dataset(dir, max_dataset_size=float("inf")):
+    mats = []
+    assert os.path.isdir(dir), '%s is not a valid directory' % dir
+
+    for root, _, fnames in sorted(os.walk(dir)):
+        for fname in fnames:
+            path = os.path.join(root, fname)
+            mats.append(path)
+    return mats[:min(max_dataset_size, len(mats))]
 
 
 class YnetDataset(BaseDataset):
@@ -49,7 +61,12 @@ class YnetDataset(BaseDataset):
             self.__outputdata.append(matdata['p0'][np.newaxis, :, :])
             self.__inputimg.append(matdata['p0_tr'][np.newaxis, :, :])
 
+        self.paths = sorted(make_ynet_dataset(opt.dataroot, opt.max_dataset_size))
+        self.size = len(self.paths)
+
     def __getitem__(self, index):
+
+        path = self.paths[index % self.size]
 
         rawdata = self.__inputdata[index]  # .reshape((1,1,2560,120))
         # rawdata = (rawdata-(np.min(np.min(rawdata,axis=2)))/((np.max(np.max(rawdata,axis=2)))-(np.min(np.min(rawdata,axis=2))))
@@ -63,7 +80,7 @@ class YnetDataset(BaseDataset):
         reconstructions = torch.Tensor(reconstruction)
         beamform = torch.Tensor(beamform)
 
-        return rawdata, reconstructions, beamform
+        return {'reimg': reconstruction, 'bfimg': beamform, 'raw': rawdata, 'path': path}
 
     def __len__(self):
         return len(self.__inputdata)

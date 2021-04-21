@@ -279,11 +279,12 @@ class YnetModel(BaseModel):
         BaseModel.__init__(self, opt)
         self.isTrain = opt.isTrain
         self.netYNet = YNet().to(self.device)
-        self.optimizer = torch.optim.Adam(self.netYNet.parameters(), lr=opt.lr)
         self.gpu_ids = opt.gpu_ids
-        self.loss_names = ['ynet']
         self.visual_names = ['reimg', 'bfimg', 'output']
         self.model_names = ['YNet']
+        if self.isTrain:
+            self.optimizer = torch.optim.Adam(self.netYNet.parameters(), lr=opt.lr)
+            self.loss_names = ['ynet']
 
     def set_input(self, input):
         """Unpack input data from the dataloader and perform necessary pre-processing steps.
@@ -291,9 +292,10 @@ class YnetModel(BaseModel):
         Parameters:
             input: a dictionary that contains the data itself and its metadata information.
         """
-        self.reimg = F.upsample(input[1], (128, 128), mode='bilinear').to(self.device)
-        self.bfimg = F.upsample(input[2], (128, 128), mode='bilinear').to(self.device)
-        self.raw = input[0].to(self.device)
+        self.reimg = F.upsample(input['reimg'], (128, 128), mode='bilinear').to(self.device)
+        self.bfimg = F.upsample(input['bfimg'], (128, 128), mode='bilinear').to(self.device)
+        self.raw = input['raw'].to(self.device)
+        self.image_paths = input['path']
 
     def forward(self):
         # encoder1: raw data
